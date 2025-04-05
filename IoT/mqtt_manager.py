@@ -1,4 +1,3 @@
-
 import asyncio
 from aiomqtt import Client
 import sys
