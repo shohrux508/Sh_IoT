@@ -8,6 +8,7 @@ from config import MQTT_BROKER, MQTT_PORT, MQTT_USERNAME, MQTT_PASSWORD, ssl_con
 class ManageBroker:
     @staticmethod
     async def publish(topic: str, command: str):
+
         try:
             async with Client(
                     hostname=MQTT_BROKER,
@@ -24,7 +25,8 @@ class ManageBroker:
     @staticmethod
     async def subscribe(topic: str):
         attempt = 0
-
+        print(MQTT_PASSWORD)
+        print(MQTT_USERNAME)
         while attempt < 5:
             try:
                 logger.info(f"[MQTT] Подключение к брокеру... Попытка {attempt + 1}")
