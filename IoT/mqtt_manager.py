@@ -25,8 +25,7 @@ class ManageBroker:
     @staticmethod
     async def subscribe(topic: str):
         attempt = 0
-        print(MQTT_PASSWORD)
-        print(MQTT_USERNAME)
+
         while attempt < 5:
             try:
                 logger.info(f"[MQTT] Подключение к брокеру... Попытка {attempt + 1}")
