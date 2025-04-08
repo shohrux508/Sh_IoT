@@ -8,7 +8,7 @@
     <div id="messages"></div>
     <script>
       // Создаем подключение к WebSocket (замени localhost:8000 на адрес твоего сервера, если необходимо)
-      const ws = new WebSocket("ws://127.0.0.1:8000/ws");
+      const ws = new WebSocket("ws://127.0.0.1:8000/webtest");
       ws.onopen = () => {
         console.log("WebSocket connection established");
         // Можно отправить сообщение серверу, если нужно

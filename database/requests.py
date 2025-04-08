@@ -1,6 +1,6 @@
-from database.models import Client, Device, ModelType
+from database.models import User, Device, ModelType
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, update
+from sqlalchemy import select, delete, update, insert
 
 
 class DB:
@@ -26,18 +26,22 @@ class Devices(DB):
     def __init__(self, session: AsyncSession):
         super().__init__(Device, session)
 
+    async def create(self, device_name: str, device_id: int):
+        statement = insert(self.model).values(id=device_id, name=device_name)
+        await self.session.execute(statement)
+        await self.session.commit()
+
     # async def update(self, pk: int, device_id: int):
     #     statement = update(Device).where(Device.pk == pk).values(device_id=device_id)
     #     await self.session.execute(statement)
     #     await self.session.commit()
 
 
-class Clients(DB):
+class Users(DB):
     def __init__(self, session: AsyncSession):
-        super().__init__(Client, session)
+        super().__init__(User, session)
 
     # async def update(self, pk: int, client_id: int):
     #     statement = update(Client).where(Client.pk == pk).values(client_id=client_id)
     #     await self.session.execute(statement)
     #     await self.session.commit()
-
