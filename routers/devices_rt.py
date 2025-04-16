@@ -59,7 +59,7 @@ async def add_device(device: DeviceCreate):
 
 
 @router.delete('/{device_id}/delete')
-async def delete_device(device_id: int, session: AsyncSession = Depends(async_session())):
+async def delete_device(device_id: int, session: AsyncSession = Depends(async_session)):
     try:
         await Devices(session).delete(model_id=device_id)
         return {"message": f"Устройство: {device_id} удалено!"}
