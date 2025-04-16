@@ -1,6 +1,6 @@
-import asyncio
 from typing import List
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends, WebSocket
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.engine import async_session
 from database.requests import Users, Devices
@@ -15,11 +15,38 @@ async def get_devices():
     return devices
 
 
-@router.get('/{device_id}', tags=['Устройства'], summary='Получить все устройства')
-async def get_device(device_id: int):
-    return {'message': devices.get(device_id)}
+@router.get('/{id}', tags=['Устройства'], summary='Получить все устройства')
+async def get_device(id: int):
+    return {'message': devices.get(id)}
+
+esp32_connection: dict[int:WebSocket] | dict = {}  # глобальная переменная, хранящая подключение
 
 
+@router.websocket("/{device_id}")
+async def websocket_endpoint(websocket: WebSocket, device_id: int):
+    global esp32_connection
+    await websocket.accept()
+    esp32_connection[device_id] = websocket
+    print("ESP32 подключился")
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            print("От ESP32:", data)
+    except:
+        print("Соединение потеряно")
+        esp32_connection = None
+
+
+@router.post("/control/{device_id}")
+async def control_device(cmd: str, device_id: int):
+    global esp32_connection
+    connection: WebSocket = esp32_connection.get(device_id)
+    if connection is None:
+        await connection.send_text(cmd)
+        return {"status": "sent", "command": cmd}
+    else:
+        return {"error": "ESP32 не подключен"}
 @router.post('/')
 async def add_device(device: DeviceCreate):
     print(f"Новое устройство: {device.name}")
@@ -32,10 +59,9 @@ async def add_device(device: DeviceCreate):
 
 
 @router.delete('/{device_id}/delete')
-async def delete_device(device_id: int):
+async def delete_device(device_id: int, session: AsyncSession = Depends(async_session())):
     try:
-        async with async_session() as session:
-            await Devices(session).delete(model_id=device_id)
+        await Devices(session).delete(model_id=device_id)
         return {"message": f"Устройство: {device_id} удалено!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail='Не удалось удалить устройство!')
