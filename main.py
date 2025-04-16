@@ -7,7 +7,12 @@ from database.engine import init_db
 from database.requests import Devices, Users
 from routers.devices_rt import router as rt1
 from routers.users_rt import router as rt2
+from auth_f.auth_main import router as rt3
 from contextlib import asynccontextmanager
+import sys
+
+if sys.platform.startswith("win") and sys.version_info >= (3, 8):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 @asynccontextmanager
@@ -21,6 +26,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(router=rt1)
 app.include_router(router=rt2)
+app.include_router(router=rt3)
 active_connections = []
 chats = {}
 

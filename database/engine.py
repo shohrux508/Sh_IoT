@@ -12,8 +12,12 @@ class Base(DeclarativeBase):
     pk = mapped_column(BigInteger, primary_key=True)
 
 
+async def get_session():
+    async with async_session() as session:
+        yield session
+
+
 async def init_db():
     async with engine.begin() as conn:
         # Base.metadata.create_all(conn)
         await conn.run_sync(Base.metadata.create_all)
-

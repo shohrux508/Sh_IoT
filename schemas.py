@@ -1,5 +1,4 @@
-from pydantic import BaseModel
-
+from pydantic import BaseModel, EmailStr
 
 
 class DeviceOut(BaseModel):
@@ -16,4 +15,14 @@ class UserOut(BaseModel):
 
 
 class UserCreate(BaseModel):
-    name: str
+    username: str
+    email: EmailStr
+    password: str
+
+
+class UserRead(BaseModel):
+    pk: int
+    email: EmailStr
+
+    class Config:
+        from_attributes = True
