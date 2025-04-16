@@ -42,7 +42,7 @@ async def websocket_endpoint(websocket: WebSocket, device_id: int):
 async def control_device(cmd: str, device_id: int):
     global esp32_connection
     connection: WebSocket = esp32_connection.get(device_id)
-    if connection is None:
+    if connection is not None:
         await connection.send_text(cmd)
         print(connection, cmd)
         return {"status": "sent", "command": cmd}
