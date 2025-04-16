@@ -22,7 +22,7 @@ async def get_device(id: int):
 esp32_connection: dict[int:WebSocket] | dict = {}  # глобальная переменная, хранящая подключение
 
 
-@router.websocket("/{device_id}")
+@router.websocket("/ws/{device_id}")
 async def websocket_endpoint(websocket: WebSocket, device_id: int):
     global esp32_connection
     await websocket.accept()
