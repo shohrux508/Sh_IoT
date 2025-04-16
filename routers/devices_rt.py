@@ -38,7 +38,7 @@ async def websocket_endpoint(websocket: WebSocket, device_id: int):
         esp32_connection = None
 
 
-@router.post("/control/{device_id}")
+@router.get("/control/{device_id}")
 async def control_device(cmd: str, device_id: int):
     global esp32_connection
     connection: WebSocket = esp32_connection.get(device_id)
