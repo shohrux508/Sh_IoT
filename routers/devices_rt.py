@@ -44,6 +44,7 @@ async def control_device(cmd: str, device_id: int):
     connection: WebSocket = esp32_connection.get(device_id)
     if connection is None:
         await connection.send_text(cmd)
+        print(connection, cmd)
         return {"status": "sent", "command": cmd}
     else:
         return {"error": "ESP32 не подключен"}
