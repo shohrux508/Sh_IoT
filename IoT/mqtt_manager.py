@@ -3,7 +3,7 @@ from aiomqtt import Client
 import sys
 from config import MQTT_BROKER, MQTT_PORT, MQTT_USERNAME, MQTT_PASSWORD, ssl_context, logger
 
-async def get_mqtt_client():
+def get_mqtt_client():
     yield Client(
         hostname=MQTT_BROKER,
         port=MQTT_PORT,
