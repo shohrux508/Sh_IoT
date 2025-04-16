@@ -15,18 +15,18 @@ async def get_devices():
     return devices
 
 
-@router.get('/{id}', tags=['Устройства'], summary='Получить все устройства')
-async def get_device(id: int):
-    return {'message': devices.get(id)}
+@router.get('/{device_id}', tags=['Устройства'], summary='Получить все устройства')
+async def get_device(device_id: int):
+    return {'message': devices.get(device_id)}
 
-esp32_connection: dict[int:WebSocket] | dict = {}  # глобальная переменная, хранящая подключение
+esp32_connections: dict[int:WebSocket] | dict = {}  # глобальная переменная, хранящая подключение
 
 
 @router.websocket("/ws/{device_id}")
 async def websocket_endpoint(websocket: WebSocket, device_id: int):
-    global esp32_connection
+    global esp32_connections
     await websocket.accept()
-    esp32_connection[device_id] = websocket
+    esp32_connections[device_id] = websocket
     print("ESP32 подключился")
 
     try:
@@ -35,25 +35,25 @@ async def websocket_endpoint(websocket: WebSocket, device_id: int):
             print("От ESP32:", data)
     except:
         print("Соединение потеряно")
-        esp32_connection = None
+        esp32_connections = None
 
 
 @router.get("/control/{device_id}")
 async def control_device(cmd: str, device_id: int):
-    global esp32_connection
-    connection: WebSocket = esp32_connection.get(device_id)
+    global esp32_connections
+    connection: WebSocket = esp32_connections.get(device_id)
     if connection is not None:
         await connection.send_text(cmd)
-        print(connection, cmd)
         return {"status": "sent", "command": cmd}
     else:
         return {"error": "ESP32 не подключен"}
+
+
 @router.post('/')
-async def add_device(device: DeviceCreate):
+async def add_device(device: DeviceCreate, session: AsyncSession = Depends(async_session)):
     print(f"Новое устройство: {device.name}")
     try:
-        async with async_session() as session:
-            await Devices(session).create(device)
+        await Devices(session).create(device)
         return {"message": "Устройство успешно добавлено!"}
     except:
         return {"message": "Не удалось добавить устройство!"}
