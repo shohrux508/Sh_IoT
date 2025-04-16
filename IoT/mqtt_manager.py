@@ -3,21 +3,19 @@ from aiomqtt import Client
 import sys
 from config import MQTT_BROKER, MQTT_PORT, MQTT_USERNAME, MQTT_PASSWORD, ssl_context, logger
 
-def get_mqtt_client():
-    yield Client(
-        hostname=MQTT_BROKER,
-        port=MQTT_PORT,
-        username=MQTT_USERNAME,
-        password=MQTT_PASSWORD,
-        tls_context=ssl_context,
-    )
 
 class ManageBroker:
     @staticmethod
     async def publish(topic: str, command: str):
 
         try:
-            async with get_mqtt_client() as client:
+            async with Client(
+                    hostname=MQTT_BROKER,
+                    port=MQTT_PORT,
+                    username=MQTT_USERNAME,
+                    password=MQTT_PASSWORD,
+                    tls_context=ssl_context,
+            ) as client:
                 await client.publish(topic, str(command))
                 logger.info(f'Отправлено: {command}')
         except Exception as e:
@@ -30,7 +28,13 @@ class ManageBroker:
         while attempt < 5:
             try:
                 logger.info(f"[MQTT] Подключение к брокеру... Попытка {attempt + 1}")
-                async with get_mqtt_client() as client:
+                async with Client(
+                        hostname=MQTT_BROKER,
+                        port=MQTT_PORT,
+                        username=MQTT_USERNAME,
+                        password=MQTT_PASSWORD,
+                        tls_context=ssl_context,
+                ) as client:
                     await client.subscribe(topic)
                     logger.info(f"[MQTT] Подписка на тему: {topic}")
                     attempt = 0
