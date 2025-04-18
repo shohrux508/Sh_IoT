@@ -2,7 +2,6 @@ import asyncio
 import time
 
 from fastapi import FastAPI, WebSocket
-from IoT.mqtt_manager import ManageBroker
 from database.engine import init_db
 from database.requests import Devices, Users
 from routers.devices_rt import router as rt1
@@ -11,16 +10,15 @@ from auth_f.auth_main import router as rt3
 from contextlib import asynccontextmanager
 import sys
 
-if sys.platform.startswith("win") and sys.version_info >= (3, 8):
+if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    # await broker_listener()
-    yield  # здесь приложение "живет"
-    # тут можно закрывать соединения, если нужно
+    yield
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -36,6 +34,11 @@ async def welcome():
     return {"message": 'Hello, world!!!'}
 
 
+@app.get('/health')
+async def health_check():
+    return {"status": "ok"}
+
+
 @app.websocket("/webtest")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -45,9 +48,9 @@ async def websocket_endpoint(websocket: WebSocket):
         data = await websocket.receive_text()
         data = data.lower()
         await websocket.send_text(f"Получено: {data}!")
-        time.sleep(2)
+        await asyncio.sleep(2)
         await websocket.send_text(f'{data}')
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 
 @app.websocket("/webtest2")
@@ -66,14 +69,13 @@ async def broadcast_message(message: str):
         except Exception as e:
             print(f"Ошибка при отправке сообщения: {e}")
 
-
 # Пример фоновой задачи, имитирующей получение сообщений от брокера
 
-async def broker_listener():
-    async for message in ManageBroker.subscribe('devices/1/control'):
-        print(f'MESSAGE: {message}')
-        await asyncio.sleep(2)
-        await broadcast_message(message)
-
-
-asyncio.create_task(broker_listener())
+# async def broker_listener():
+#     async for message in ManageBroker.subscribe('devices/1/control'):
+#         print(f'MESSAGE: {message}')
+#         await asyncio.sleep(2)
+#         await broadcast_message(message)
+#
+#
+# asyncio.create_task(broker_listener())
