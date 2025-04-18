@@ -1,14 +1,13 @@
 import asyncio
-import time
+import sys
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket
+
+from auth_f.auth_main import router as rt3
 from database.engine import init_db
-from database.requests import Devices, Users
 from routers.devices_rt import router as rt1
 from routers.users_rt import router as rt2
-from auth_f.auth_main import router as rt3
-from contextlib import asynccontextmanager
-import sys
 
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())

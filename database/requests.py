@@ -3,7 +3,7 @@ from database.models import User, Device, ModelType
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, update, insert
 
-from schemas import UserCreate, DeviceCreate
+from schemas.schemas import UserCreate, DeviceCreate
 
 
 class DB:
