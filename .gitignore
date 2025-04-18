@@ -1,3 +1,16 @@
-shvenv
-.idea
-__pycache__
+# Secrets
+.env
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environments
+venv/
+shvenv/
+
+# IDE / OS
+.idea/
+.DS_Store
+*.log
