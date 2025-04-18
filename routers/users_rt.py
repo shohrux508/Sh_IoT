@@ -9,7 +9,7 @@ router = APIRouter(prefix='/users', tags=['Users'])
 
 @router.get('/')
 async def get_users():
-    return {"id": 1}
+    return {"device_id": 1}
 
 
 @router.post("")
