@@ -4,10 +4,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket
 
-from auth_f.auth_main import router as rt3
-from database.engine import init_db
-from routers.devices_rt import router as rt1
-from routers.users_rt import router as rt2
+from app import main_router
+from app.database import init_db
 
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -21,9 +19,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-app.include_router(router=rt1)
-app.include_router(router=rt2)
-app.include_router(router=rt3)
+app.include_router(main_router)
+
 active_connections = []
 chats = {}
 

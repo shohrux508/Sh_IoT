@@ -3,7 +3,7 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONBUFFERED=1
 
-WORKDIR/app
+WORKDIR /app
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends build-essential && \

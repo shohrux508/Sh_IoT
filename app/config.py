@@ -10,11 +10,6 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL is None:
     raise ValueError('Database URL not given!')
 
-MQTT_BROKER = os.getenv('MQTT_BROKER')
-MQTT_PORT = int(os.getenv('MQTT_PORT'))
-MQTT_USERNAME = os.getenv('MQTT_USERNAME')
-MQTT_PASSWORD = os.getenv('MQTT_PASSWORD')
-
 ssl_context = ssl.create_default_context()
 
 # Настройка логирования

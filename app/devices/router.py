@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Query, WebSocket
 
+
 router = APIRouter(prefix='/devices')
 devices = {1: 'raspberrypi5', 2: 'raspberrypi4'}
 
