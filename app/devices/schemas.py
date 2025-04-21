@@ -1,13 +1,29 @@
+from typing import Dict
+
 from pydantic import BaseModel
+from fastapi.websockets import WebSocket
 
 
 class Device(BaseModel):
-    id: int
+    device_id: int
 
 
-class DeviceOut(Device):
+class DeviceResponse(Device):
     pass
 
 
 class DeviceCreate(Device):
     name: str
+
+class CommandResponse(Device):
+    success: bool
+    command: str
+
+class ErrorResponse(BaseModel):
+    error: str
+
+class ActiveDevicesResponse(BaseModel):
+    active_devices: list[int]
+
+    class Config:
+        arbitrary_types_allowed = True
