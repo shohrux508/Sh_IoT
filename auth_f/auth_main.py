@@ -5,6 +5,15 @@ from database.engine import get_session
 from database.models import User
 from database.requests import Users
 from schemas.schemas import UserRead, UserCreate
+from jose import JWTError, jwt
+from datetime import datetime, timedelta
+from passlib.context import CryptContext
+
+
+SECRET_KEY = "key"
+ALGORITHM = 'HS256'
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
 
 router = APIRouter(prefix='/auth')
 
