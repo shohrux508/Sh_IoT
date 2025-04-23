@@ -23,3 +23,5 @@ class BaseService(Generic[RepoType]):
 
     async def update_by_id(self, id, schema: SchemaType) -> bool:
         return await self.db_repository.update_by_id(id, schema)
+
+
