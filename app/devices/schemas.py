@@ -12,8 +12,9 @@ class DeviceResponse(Device):
     pass
 
 
-class DeviceCreate(Device):
-    name: str
+class DeviceCreate(BaseModel):
+    token: str
+
 
 class CommandResponse(Device):
     success: bool

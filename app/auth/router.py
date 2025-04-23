@@ -1,22 +1,34 @@
-from fastapi import Depends, HTTPException, status, APIRouter
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from jose import JWTError, jwt
-from datetime import datetime, timedelta
-from passlib.context import CryptContext
-
-from app.auth.schemas import UserRead, UserCreate
-from app.users.dependencies import get_user_service
-from app.users.repositories import UserRepository
-from app.users.service import UserService
-
-SECRET_KEY = "key"
-ALGORITHM = 'HS256'
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+from fastapi import APIRouter, HTTPException, Response, Depends
+from authx import AuthX, AuthXConfig
+from app.auth.schemas import UserCreate, UserLogin
+from app.auth.utils import hash_password, verify_password
 
 router = APIRouter(prefix='/auth')
 
+config = AuthXConfig()
+config.JWT_SECRET_KEY = "SECRET_KEY"
+config.JWT_ACCESS_COOKIE_NAME = "my_access_token"
+config.JWT_TOKEN_LOCATION = ['cookies']
 
-@router.post('/register', response_model=UserRead, tags=['Регистрация'], summary='Зарегистрироваться')
-async def register_user(user: UserCreate, service: UserService = Depends(get_user_service)):
-    pass
+security = AuthX(config=config)
+
+@router.post('/register')
+async def register(creds: UserCreate):
+    pw = creds.password
+    username = creds.username
+    email = creds.email
+
+
+
+@router.post("/login")
+async def login(creds: UserLogin, response: Response):
+    hashed_pw = hash_password(creds.password)
+    if creds.username == 'test' and verify_password(plain_password=creds.password, hashed_password=hashed_pw):
+        token = security.create_access_token(uid='12345')
+        response.set_cookie(config.JWT_ACCESS_COOKIE_NAME, token)
+        return {"access_token": token}
+    raise HTTPException(status_code=401, detail='Incorrect username of password')
+
+@router.get('/protected', dependencies=[Depends(security.access_token_required)])
+def protected():
+    return {"data": "HELLO, WORLD!"}

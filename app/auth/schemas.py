@@ -6,11 +6,15 @@ from app.auth.utils import hash_password
 class UserCreate(BaseModel):
     username: str
     email: EmailStr
-    hashed_password: str
+    password: str
 
-    @field_validator('hashed_password')
+    @field_validator('password')
     def hash_psw(cls, value):
         return hash_password(value)
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
 
 
 class UserRead(BaseModel):
