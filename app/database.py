@@ -1,7 +1,5 @@
-from sqlalchemy import BigInteger
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped, DeclarativeMeta
-from typing_extensions import TypeVar
+from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
 
 from app.config import DATABASE_URL
 

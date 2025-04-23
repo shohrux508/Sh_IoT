@@ -9,7 +9,7 @@ class UserCreate(BaseModel):
     password: str
 
     @field_validator('password')
-    def hash_psw(self, value):
+    def hash_psw(cls, value):
         return hash_password(value)
 
 class UserLogin(BaseModel):
