@@ -5,7 +5,7 @@ from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import JSONResponse
 
 from app.config import logger
-from app.devices.schemas import CommandResponse, ErrorResponse, ActiveDevicesResponse
+from app.devices.schemas import CommandResponse, ErrorResponse, ActiveDevicesResponse, DeviceCreate
 from app.devices.manager import DeviceConnectionManager
 
 router = APIRouter(prefix='/devices')
@@ -19,6 +19,14 @@ manager = DeviceConnectionManager()
 @router.websocket('/register/{device_id}', name='Регистрация устройства')
 async def websocket_endpoint(websocket: WebSocket, device_id: int):
     await websocket.accept()
+    raw_data = await websocket.receive_text()
+    creds = DeviceCreate.model_validate_json(raw_data)
+    if not creds.token == '2645':
+        logger.info(f'Устройство {device_id} не смогло подключиться, из-за неправильного токена')
+        await websocket.send_text("❌ Неверный токен")
+        await websocket.close()
+        return
+
     await manager.register(device_id, websocket)
     logger.info(f'Устройство {device_id} подключено.')
 
