@@ -25,6 +25,7 @@ async def websocket_endpoint(websocket: WebSocket, device_id: int):
         logger.info(f'Устройство {device_id} не смогло подключиться, из-за неправильного токена')
         await websocket.send_text("❌ Неверный токен")
         await websocket.close()
+
         return
 
     await manager.register(device_id, websocket)
