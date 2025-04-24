@@ -1,17 +1,17 @@
 import asyncio
-
 from datetime import UTC, datetime, timedelta
-from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, status
+
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, Request, status, UploadFile, Depends
 from fastapi.responses import JSONResponse
 
 from app.config import logger
-from app.devices.schemas import CommandResponse, ErrorResponse, ActiveDevicesResponse, DeviceCreate
 from app.devices.manager import DeviceConnectionManager
+from app.devices.schemas import CommandResponse, ErrorResponse, ActiveDevicesResponse, DeviceCreate
 
 router = APIRouter(prefix='/devices')
 
 HEARTBEAT_INTERVAL = 10  # каждое N секунд пингуем
-HEARTBEAT_TIMEOUT = 30   # если нет ответа за N секунд — отключаем
+HEARTBEAT_TIMEOUT = 30  # если нет ответа за N секунд — отключаем
 
 manager = DeviceConnectionManager()
 
@@ -19,14 +19,6 @@ manager = DeviceConnectionManager()
 @router.websocket('/register/{device_id}', name='Регистрация устройства')
 async def websocket_endpoint(websocket: WebSocket, device_id: int):
     await websocket.accept()
-    raw_data = await websocket.receive_text()
-    creds = DeviceCreate.model_validate_json(raw_data)
-    if not creds.token == '2645':
-        logger.info(f'Устройство {device_id} не смогло подключиться, из-за неправильного токена')
-        await websocket.send_text("❌ Неверный токен")
-
-        return
-
     await manager.register(device_id, websocket)
     logger.info(f'Устройство {device_id} подключено.')
 
@@ -82,6 +74,7 @@ async def websocket_endpoint(websocket: WebSocket, device_id: int):
         except Exception as e:
             logger.debug(f'Ошибка при закрытии WebSocket {device_id}: {e}')
 
+
 @router.get(
     path='/control/{device_id}',
     response_model=CommandResponse,
@@ -104,6 +97,32 @@ async def control_device(device_id: int, cmd: str = Query(..., description='Ко
             content=ErrorResponse(error=f'Устройство {device_id} не подключено').model_dump()
         )
 
+
 @router.get('/active', response_model=ActiveDevicesResponse, summary='Активные устройства')
 async def active_devices():
     return ActiveDevicesResponse(active_devices=await manager.all_ids())
+
+
+@router.post('/files')
+async def upload_file(uploaded_file: UploadFile):
+    file = uploaded_file.file
+    filename = uploaded_file.filename
+    with open(f'1_{filename}', 'wb') as f:
+        f.write(file.read())
+
+
+def get_token():
+    return 'secret123'
+
+
+@router.get('/secure')
+async def secure_token(token: str = Depends(get_token)):
+    return {'token': token}
+
+
+@router.get('/info')
+async def get_info(request: Request):
+    client = request.client.host
+    return {'client_ip': client}
+
+
