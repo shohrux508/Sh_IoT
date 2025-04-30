@@ -66,6 +66,14 @@ class SmartSocketControl(BaseDevice):
         }
         await self.websocket.send_text(data=json.dumps(data))
 
+    async def clear_timer(self):
+        data = {
+            'action': 'clear_timer',
+            'device_id': self.device_id,
+            'device_type': self.device_type
+        }
+        await self.websocket.send_text(data=json.dumps(data))
+
     async def get_state(self):
         data = {
             'action': 'get_state',
