@@ -1,128 +1,66 @@
-import asyncio
-from datetime import UTC, datetime, timedelta
+from fastapi import APIRouter, Query, WebSocket
 
-from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, Request, status, UploadFile, Depends
-from fastapi.responses import JSONResponse
-
-from app.config import logger
-from app.devices.manager import DeviceConnectionManager
-from app.devices.schemas import CommandResponse, ErrorResponse, ActiveDevicesResponse, DeviceCreate
+from app.devices.device_service import control_device, get_device_status, get_active_devices
+from app.devices.event_handlers import handle_device_event
+from app.devices.schemas import (
+    ActiveDevicesResponse,
+    DeviceRequestControl,
+    DeviceControlResponse,
+    DeviceStatusResponse)
+from app.devices.ws_connection import DeviceSession, device_session_manager
 
 router = APIRouter(prefix='/devices')
-
-HEARTBEAT_INTERVAL = 10  # каждое N секунд пингуем
-HEARTBEAT_TIMEOUT = 30  # если нет ответа за N секунд — отключаем
-
-manager = DeviceConnectionManager()
 
 
 @router.websocket('/register/{device_id}', name='Регистрация устройства')
 async def websocket_endpoint(websocket: WebSocket, device_id: int):
     await websocket.accept()
-    await manager.register(device_id, websocket)
-    logger.info(f'Устройство {device_id} подключено.')
-
-    last_pong_time = datetime.now(UTC)
-
-    async def ping_loop():
-        nonlocal last_pong_time
-        try:
-            while True:
-                await asyncio.sleep(HEARTBEAT_INTERVAL)
-                try:
-                    await websocket.send_text('ping')
-                    logger.debug(f'Ping отправлен устройству {device_id}')
-                except Exception as e:
-                    logger.warning(f'Ошибка при отправке ping устройству {device_id}: {e}')
-                    break
-
-                if datetime.now(UTC) - last_pong_time > timedelta(seconds=HEARTBEAT_TIMEOUT):
-                    logger.warning(f'Таймаут heartbeat для устройства {device_id}')
-                    break
-        finally:
-            # Закрытие соединения инициируется снаружи
-            pass
-
-    async def listen_loop():
-        nonlocal last_pong_time
-        while True:
-            try:
-                message = await websocket.receive_text()
-                if message.lower() == 'pong':
-                    last_pong_time = datetime.now(UTC)
-                    logger.debug(f'Pong получен от {device_id}')
-                else:
-                    logger.info(f'Получено от {device_id}: {message}')
-            except WebSocketDisconnect:
-                logger.warning(f'WebSocketDisconnect от устройства {device_id}')
-                break
-            except Exception as e:
-                logger.error(f'Ошибка получения данных от устройства {device_id}: {e}')
-                break
-
-    # Запускаем оба процесса параллельно
     try:
-        await asyncio.gather(ping_loop(), listen_loop())
-    finally:
-        print('here')
-        if await manager.get(device_id) is websocket:
-            await manager.unregister(device_id)
-            logger.info(f'Устройство {device_id} удалено из хранилища')
+        await device_session_manager.register(device_id=device_id, websocket=websocket)
+        session = DeviceSession(device_id=device_id, websocket=websocket, event_handler=handle_device_event)
 
-        try:
-            await websocket.close()
-        except Exception as e:
-            logger.debug(f'Ошибка при закрытии WebSocket {device_id}: {e}')
+        await session.start()
+    except Exception:
+        await websocket.close()
+        raise
 
 
-@router.get(
+@router.post(
     path='/control/{device_id}',
-    response_model=CommandResponse,
-    responses={
-        404: {'model': ErrorResponse, 'description': 'Устройство не подключено'}
-    },
+    response_model=DeviceControlResponse,
     summary='Управление устройством'
 )
-async def control_device(device_id: int, cmd: str = Query(..., description='Команда для ESP8266')):
-    connection: WebSocket = await manager.get(device_id)
+async def control_socket(device_id: int, request: DeviceRequestControl):
+    state = request.state
+    device_type = request.device_type
+    start_time = request.start_time
+    stop_time = request.stop_time
+    action, result_state = await control_device(
+        device_id=device_id,
+        device_type=device_type,
+        start_time=start_time,
+        stop_time=stop_time,
+        state=state
+    )
+    return DeviceControlResponse(
+        action=action,
+        state=result_state,
+        device_id=device_id
+    )
 
-    if connection is not None:
-        await connection.send_text(cmd)
-        logger.info(f'Команда \'{cmd}\' отправлена на устройство {device_id}')
-        return CommandResponse(success=True, device_id=device_id, command=cmd)
-    else:
-        logger.warning(f'Попытка отправить команду на неактивное устройство {device_id}')
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content=ErrorResponse(error=f'Устройство {device_id} не подключено').model_dump()
-        )
+
+@router.get('/status/{device_id}', response_model=DeviceStatusResponse)
+async def get_device_status_r(device_id: int,
+                              device_type: str = Query(..., description='Получение статуса устройства')):
+    state = await get_device_status(device_id=device_id, device_type=device_type)
+    return DeviceStatusResponse(
+        device_id=device_id,
+        state=state
+    )
 
 
-@router.get('/active', response_model=ActiveDevicesResponse, summary='Активные устройства')
+@router.get('/active', response_model=ActiveDevicesResponse, summary='Список активных устройств')
 async def active_devices():
-    return ActiveDevicesResponse(active_devices=await manager.all_ids())
-
-
-@router.post('/files')
-async def upload_file(uploaded_file: UploadFile):
-    file = uploaded_file.file
-    filename = uploaded_file.filename
-    with open(f'1_{filename}', 'wb') as f:
-        f.write(file.read())
-
-
-def get_token():
-    return 'secret123'
-
-
-@router.get('/secure')
-async def secure_token(token: str = Depends(get_token)):
-    return {'token': token}
-
-
-@router.get('/info')
-async def get_info(request: Request):
-    client = request.client.host
-    return {'client_ip': client}
-
-
+    device_ids = await get_active_devices()
+    print(device_ids)
+    return ActiveDevicesResponse(active_devices=device_ids)
