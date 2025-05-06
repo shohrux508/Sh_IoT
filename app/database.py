@@ -8,7 +8,7 @@ async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 
 class Base(DeclarativeBase):
-    id: Mapped[int] = mapped_column(primary_key=True)
+    pk: Mapped[int] = mapped_column(primary_key=True)
 
 
 async def get_db():

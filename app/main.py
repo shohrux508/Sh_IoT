@@ -13,7 +13,7 @@ if sys.platform.startswith("win"):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
+    # await init_db()
     yield
 
 

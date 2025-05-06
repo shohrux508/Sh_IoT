@@ -1,9 +1,26 @@
+import uuid
+
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Boolean, DateTime
+import datetime
 
 from app.database import Base
 
 
+def generate_registration_code():
+    return '1234'
+
+
+def generate_auth_token():
+    return 'token1234'
+
+
 class Device(Base):
     __tablename__ = 'devices'
-    device_id: Mapped[int] = mapped_column(unique=True)
-    name: Mapped[str] = mapped_column()
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    registration_code: Mapped[str] = mapped_column(String, unique=True, default=generate_registration_code)
+    auth_token: Mapped[str] = mapped_column(String, unique=True, default=generate_auth_token)
+    is_registered: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.datetime.now)
+    registered_at: Mapped[datetime | None] = mapped_column(DateTime, default=None)
+    last_seen: Mapped[datetime | None] = mapped_column(DateTime, default=None)
