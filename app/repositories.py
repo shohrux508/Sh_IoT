@@ -69,3 +69,4 @@ class BaseRepository(Generic[ModelType]):
         """
         return await self.get_by_id(id) is not None
 
+

@@ -8,6 +8,28 @@ class DeviceRequestControl(BaseModel):
     stop_time: constr(pattern=r"^\d{2}:\d{2}$") | None = None
 
 
+class DeviceCreate(BaseModel):
+    name: str
+
+
+class DeviceDataInfo(BaseModel):
+    registration_code: str
+    auth_token: str
+
+    class Config:
+        from_attributes = True
+
+
+class DeviceInfo(BaseModel):
+    id: int
+    name: str
+    last_seen: str | None = None
+    data: DeviceDataInfo
+
+    class Config:
+        from_attributes = True
+
+
 class DeviceControlResponse(BaseModel):
     action: str
     state: bool | int
@@ -21,14 +43,6 @@ class DeviceStatusResponse(BaseModel):
 
 class Device(BaseModel):
     device_id: int
-
-
-class DeviceResponse(Device):
-    pass
-
-
-class DeviceCreate(BaseModel):
-    token: str
 
 
 class CommandResponse(Device):
