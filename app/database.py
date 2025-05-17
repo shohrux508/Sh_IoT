@@ -5,8 +5,7 @@ from app.config import DATABASE_URL
 
 engine = create_async_engine(
     DATABASE_URL,
-    echo=False,
-    connect_args={"ssl": True}  # <-- Это критично для облака!
+    echo=False
 )
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
