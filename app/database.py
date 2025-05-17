@@ -3,7 +3,11 @@ from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
 
 from app.config import DATABASE_URL
 
-engine = create_async_engine(DATABASE_URL, echo=False)
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=False,
+    connect_args={"ssl": True}  # <-- Это критично для облака!
+)
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 
