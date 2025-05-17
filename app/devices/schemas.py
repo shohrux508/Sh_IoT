@@ -1,7 +1,7 @@
 from pydantic import BaseModel, constr
 
 
-class DeviceRequestControl(BaseModel):
+class DeviceControl_request(BaseModel):
     device_type: str
     state: bool | int | None = None
     start_time: constr(pattern=r"^\d{2}:\d{2}$") | None = None
@@ -30,13 +30,13 @@ class DeviceInfo(BaseModel):
         from_attributes = True
 
 
-class DeviceControlResponse(BaseModel):
+class DeviceControl_response(BaseModel):
     action: str
     state: bool | int
     device_id: int
 
 
-class DeviceStatusResponse(BaseModel):
+class DeviceStatus_response(BaseModel):
     device_id: int
     state: bool
 

@@ -1,90 +1,84 @@
 import asyncio
 from datetime import datetime, timedelta
 
+from app.events.emitters import event_bus
+from typing import Dict
 from fastapi import WebSocket
+import json
+from app.logger_module.logger_utils import get_logger_factory
+
+get_logger = get_logger_factory(__name__)
+logger = get_logger()
 
 
-class DeviceSession:
-    HEARTBEAT_INTERVAL = 10  # секунд
-    HEARTBEAT_TIMEOUT = 30  # секунд
+class WSConnectionManager:
+    def __init__(self):
+        self.active: dict[str, WebSocket] = {}
+        self.pending = {}
 
-    def __init__(self, device_id: int, websocket: WebSocket, event_handler=None):
-        self.device_id = device_id
-        self.websocket = websocket
-        self.event_handler = event_handler
-        self.last_pong_time = datetime.now()
-        self.running = True
-        self.manager = device_session_manager
+    async def connect(self, device_id: str, ws: WebSocket):
+        self.active[device_id] = ws
+        event_bus.emit('device_connected', device_id)
 
-    async def start(self):
+    async def disconnect(self, device_id: str) -> bool:
         try:
-            await asyncio.gather(
-                self.ping_loop(),
-                self.listen_loop(),
-            )
-        except Exception as e:
-            print(f"[{self.device_id}] Ошибка в работе устройства: {e}")
-            self.running = False
-        finally:
-            if not self.running:  # только если сессия остановлена из-за сбоя
-                await self.manager.unregister(self.device_id)
-                print(f"[{self.device_id}] Сессия завершена и удалена.")
+            self.active.pop(device_id, None)
+            event_bus.emit('device_disconnected', device_id)
+        except:
+            return False
+        return True
 
-    async def ping_loop(self):
-        while self.running:
-            await asyncio.sleep(self.HEARTBEAT_INTERVAL)
-            await self.websocket.send_text("ping")
+    async def get(self, device_id) -> WebSocket | None:
+        return self.active.get(device_id)
 
-            if datetime.now() - self.last_pong_time > timedelta(seconds=self.HEARTBEAT_TIMEOUT):
-                print(f'Текущее время: {datetime.now()}\n'
-                      f'Время последнего pong\'а: {self.last_pong_time}')
-                print(f"[{self.device_id}] Таймаут heartbeat")
-                self.running = False
+    async def get_list(self) -> Dict:
+        return self.active
 
-    async def listen_loop(self):
-        while self.running:
+    async def broadcast(self, message: dict | str):
+        payload = json.dumps(message, ensure_ascii=False) if not isinstance(message, str) else message
+        for ws in self.active.values():
+            await ws.send_text(payload)
+
+    async def send_personal(self, device_id: str, message: dict | str, request_id: str = None,
+                            timeout: float = 5) -> dict | None:
+        ws = self.active.get(device_id)
+        if not ws:
+            event_bus.emit('message_failed', device_id, message)
+            raise RuntimeError(f'Websocket for device {device_id} not found')
+        if isinstance(message, str):
+            payload = message
+        else:
+            payload = json.dumps(message, ensure_ascii=False)
+
+        await ws.send_text(payload)
+        request_id = message.get('request_id')
+        if request_id:
+            future = asyncio.get_event_loop().create_future()
+            self.pending.setdefault(device_id, {})[request_id] = future
             try:
-                message = await self.websocket.receive_text()
-                print(message)
-                self.last_pong_time = datetime.now()
-            except:
-                await asyncio.sleep(3)
+                response = await asyncio.wait_for(future, timeout=timeout)
+                return response
+            except asyncio.TimeoutError:
+                logger.warning(f"Device {device_id} did not respond in time.")
+            finally:
+                self.pending[device_id].pop(request_id, None)
 
-    async def send_command(self, cmd: str):
-        try:
-            await self.websocket.send_text(cmd)
-        except Exception as e:
-            print(f"[{self.device_id}] Ошибка отправки команды: {e}")
+        return None
 
-    async def close(self):
-        # Гарантируем закрытие независимо от флага running
-        self.running = False
-        try:
-            await self.websocket.close()
-        except Exception:
-            pass
-        print(f"[{self.device_id}] Сессия завершена")
-
-
-class DeviceConnectionManager:
-    def __init__(self, event_handler=None):
-        self.active_devices: dict[int, DeviceSession] = {}
-        self.event_handler = event_handler
-
-    async def register(self, device_id: int, websocket: WebSocket):
-        session = DeviceSession(device_id=device_id, websocket=websocket, event_handler=self.event_handler)
-        self.active_devices[device_id] = session
-
-    async def unregister(self, device_id: int):
-        session = self.active_devices.pop(device_id, None)
-        if session:
-            await session.close()
-
-    async def get(self, device_id: int) -> DeviceSession | None:
-        return self.active_devices.get(device_id)
-
-    async def all_ids(self) -> list[int]:
-        return list(self.active_devices.keys())
+    async def set_response(self, device_id: str, message: dict | str):
+        if isinstance(message, str):
+            try:
+                message = json.loads(message)
+            except Exception as e:
+                logger.error(f"Ошибка при разборе сообщения от {device_id}: {e}\n{message}")
+                return
+        if 'request_id' not in message:
+            return
+        request_id = message.get('request_id')
+        if request_id and device_id in self.pending and request_id in self.pending[device_id]:
+            future = self.pending[device_id][request_id]
+            if not future.done():
+                future.set_result(message)
 
 
-device_session_manager = DeviceConnectionManager()
+ws_manager = WSConnectionManager()

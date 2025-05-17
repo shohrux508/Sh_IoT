@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.devices.router import router as devices_router
+from app.devices.device_routers import router as devices_router
 
 main_router = APIRouter()
 

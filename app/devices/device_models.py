@@ -8,11 +8,11 @@ from app.database import Base
 
 
 def generate_registration_code():
-    return '423428'
+    return '12345678'
 
 
 def generate_auth_token():
-    return 'abc423428'
+    return 'abc12345678'
 
 
 class Device(Base):

@@ -1,6 +1,6 @@
 # device_repository
 from app.repositories import BaseRepository
-from app.devices.models import Device, DeviceDatas
+from app.devices.device_models import Device, DeviceDatas
 from app.types import SchemaType
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
