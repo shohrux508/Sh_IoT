@@ -1,5 +1,4 @@
 import os
-import ssl
 
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -9,8 +8,6 @@ load_dotenv('.env')
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL is None:
     raise ValueError('Database URL not given!')
-
-# ssl_context = ssl.create_default_context()
 
 
 # Настройка логирования

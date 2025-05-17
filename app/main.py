@@ -22,20 +22,14 @@ if sys.platform.startswith("win"):
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app1: FastAPI):
     from app.events import handlers
     await init_db()
     yield
 
 
-# 🔧 создаём функцию
-def create_app() -> FastAPI:
-    app = FastAPI(lifespan=lifespan)
-    app.include_router(main_router)
-    return app
-
-
-app = create_app()
+app = FastAPI(lifespan=lifespan)
+app.include_router(main_router)
 
 
 @app.get('/')
