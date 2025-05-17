@@ -10,7 +10,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL is None:
     raise ValueError('Database URL not given!')
 
-ssl_context = ssl.create_default_context()
+# ssl_context = ssl.create_default_context()
 
 
 # Настройка логирования
