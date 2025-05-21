@@ -1,10 +1,10 @@
 import asyncio
-from datetime import datetime, timedelta
+import json
+from typing import Dict
+
+from fastapi import WebSocket
 
 from app.events.emitters import event_bus
-from typing import Dict
-from fastapi import WebSocket
-import json
 from app.logger_module.logger_utils import get_logger_factory
 
 get_logger = get_logger_factory(__name__)
@@ -16,50 +16,65 @@ class WSConnectionManager:
         self.active: dict[str, WebSocket] = {}
         self.pending = {}
 
-    async def connect(self, device_id: str, ws: WebSocket):
+    async def add(self, device_id: str, ws: WebSocket):
         self.active[device_id] = ws
-        event_bus.emit('device_connected', device_id)
+        event_bus.emit('device_ws_added', device_id)
 
-    async def disconnect(self, device_id: str) -> bool:
+    async def remove(self, device_id: str) -> bool:
         try:
             self.active.pop(device_id, None)
-            event_bus.emit('device_disconnected', device_id)
-        except:
+            await self.active[device_id].close()
+        except Exception as e:
+            logger.error(e)
             return False
         return True
 
     async def get(self, device_id) -> WebSocket | None:
         return self.active.get(device_id)
 
-    async def get_list(self) -> Dict:
-        return self.active
+    async def get_list(self):
+        return list(self.active.keys())
 
     async def broadcast(self, message: dict | str):
-        payload = json.dumps(message, ensure_ascii=False) if not isinstance(message, str) else message
-        for ws in self.active.values():
-            await ws.send_text(payload)
+        payload = json.dumps(message, ensure_ascii=False)
+        tasks = [
+            self._safe_send(device_id, ws, payload)
+            for device_id, ws in list(self.active.items())
+        ]
+        await asyncio.gather(*tasks)
 
-    async def send_personal(self, device_id: str, message: dict | str, request_id: str = None,
-                            timeout: float = 5) -> dict | None:
+    async def _safe_send(self, device_id, ws, payload):
+        try:
+            await ws.send_text(payload)
+        except Exception:
+            event_bus.emit('message_failed', device_id, payload)
+
+    async def send_personal(self, device_id: str, data: str | dict,
+                            request_id: str = None, timeout: float = 5) -> dict | None | bool:
         ws = self.active.get(device_id)
         if not ws:
-            event_bus.emit('message_failed', device_id, message)
-            raise RuntimeError(f'Websocket for device {device_id} not found')
-        if isinstance(message, str):
-            payload = message
+            event_bus.emit('message_failed', device_id, data)
+            return False
+        if isinstance(data, str):
+            payload = data
+        elif isinstance(data, dict):
+            if request_id:
+                data["request_id"] = request_id
+            payload = json.dumps(data, ensure_ascii=False)
         else:
-            payload = json.dumps(message, ensure_ascii=False)
+            raise TypeError("message должен быть str или dict")
 
         await ws.send_text(payload)
-        request_id = message.get('request_id')
         if request_id:
             future = asyncio.get_event_loop().create_future()
             self.pending.setdefault(device_id, {})[request_id] = future
             try:
                 response = await asyncio.wait_for(future, timeout=timeout)
+                response = response.get('request_id')
+                event_bus.emit('got_reply', device_id, data, str(response))
                 return response
             except asyncio.TimeoutError:
-                logger.warning(f"Device {device_id} did not respond in time.")
+                event_bus.emit(f'no_reply', device_id, data)
             finally:
                 self.pending[device_id].pop(request_id, None)
 

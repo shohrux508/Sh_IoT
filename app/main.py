@@ -37,11 +37,6 @@ async def welcome():
     return {"message": 'Hello, world!!!'}
 
 
-@app.get('/health')
-async def health_check():
-    return {"status": "ok"}
-
-
 @app.middleware('http')
 async def log_requests(request: Request, call_next):
     client = request.client.host if request.client else 'unknown'

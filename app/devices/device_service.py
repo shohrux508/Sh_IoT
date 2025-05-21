@@ -3,7 +3,7 @@ from app.services import BaseService
 from fastapi import WebSocket, HTTPException, status
 
 from app.devices.device_adapters import DeviceCommands
-from app.devices.ws_connection import ws_manager
+from app.ws.ws_connection import ws_manager
 
 
 class DeviceService(BaseService[DeviceRepository]):
@@ -70,26 +70,20 @@ class DeviceService(BaseService[DeviceRepository]):
         :param stop_time: Время выключения.
         :return: Результат действия и текущее состояние.
         """
-        try:
-            websocket = await DeviceService.get_websocket_or_404(device_id)
-        except Exception as e:
-            print(f'Ошибка Websocket, {e}')
-            return 'Не удалось найти соединений', state
 
-        device = DeviceCommands(device_type=device_type, device_id=device_id, websocket=websocket)
-
+        device = DeviceCommands(device_type=device_type, device_id=device_id)
         if start_time and stop_time:
-            await device.set_timer(start_time=start_time, stop_time=stop_time)
-            return 'Set timer', state
+            response = await device.set_timer(start_time=start_time, stop_time=stop_time)
+            return response, state
         elif state is not None:
-            await device.set_state(state=state)
-            return 'Set state', state
+            response = await device.set_state(state=state)
+            return response, state
         else:
-            await device.clear_timer()
-            return 'Clear timer', 0
+            response = await device.clear_timer()
+            return response, 0
 
     @staticmethod
-    async def get_device_status(device_id: int, device_type: str) -> bool:
+    async def get_device_status(device_id: int) -> bool:
         """
         Получить текущее состояние устройства через WebSocket.
 
@@ -98,17 +92,9 @@ class DeviceService(BaseService[DeviceRepository]):
         :return: True — включено, False — выключено.
         """
         websocket = await DeviceService.get_websocket_or_404(device_id)
-        device = DeviceCommands(device_type=device_type, device_id=device_id, websocket=websocket)
+        device = DeviceCommands(device_type=device_type, device_id=device_id)
         return await device.get_state()
 
-    @staticmethod
-    async def get_active_devices() -> list[int]:
-        """
-        Получить список ID всех устройств, у которых есть активное WebSocket-соединение.
-
-        :return: Список ID активных устройств.
-        """
-        return await ws_manager.get_list()
 
     async def verify_auth_token(self, device_id: int, auth_token: str):
         device = await self.repo.get_by_auth_token(auth_token=auth_token)

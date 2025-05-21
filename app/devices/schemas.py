@@ -1,4 +1,5 @@
 from pydantic import BaseModel, constr
+from datetime import datetime
 
 
 class DeviceControl_request(BaseModel):
@@ -23,7 +24,7 @@ class DeviceDataInfo(BaseModel):
 class DeviceInfo(BaseModel):
     id: int
     name: str
-    last_seen: str | None = None
+    last_seen: datetime | None = None
     data: DeviceDataInfo
 
     class Config:
@@ -38,7 +39,7 @@ class DeviceControl_response(BaseModel):
 
 class DeviceStatus_response(BaseModel):
     device_id: int
-    state: bool
+    status: bool
 
 
 class Device(BaseModel):
@@ -55,7 +56,7 @@ class ErrorResponse(BaseModel):
 
 
 class ActiveDevicesResponse(BaseModel):
-    active_devices: dict
+    active_devices: list
 
     class Config:
         arbitrary_types_allowed = True

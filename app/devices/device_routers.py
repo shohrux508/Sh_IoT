@@ -1,12 +1,15 @@
+from fastapi import HTTPException
 from typing import List
 
-from fastapi import APIRouter, Query, WebSocket, Depends, HTTPException
+from fastapi import APIRouter, Query, WebSocket, Depends
 
 from app.devices.dependencies import get_device_service
 from app.devices.device_service import DeviceService
 from app.devices.schemas import *
-from app.devices.ws_handlers import websocket_handler
+from app.events.emitters import event_bus
 from app.logger_module.logger_utils import get_logger_factory
+from app.ws.ws_connection import ws_manager
+from app.ws.ws_handler import websocket_handler
 
 get_logger = get_logger_factory(__name__)
 logger = get_logger()
@@ -24,41 +27,30 @@ async def websocket_connection(websocket: WebSocket, device_id: int,
     # {"auth_token": "abc123"}
 
 
-@router.post(
-    path='/control/{device_id}',
-    response_model=DeviceControl_response,
-    summary='Управление устройством'
-)
+@router.post(path='/control/{device_id}', response_model=DeviceControl_response, summary='Управление устройством')
 async def control_socket(device_id: int, request: DeviceControl_request,
                          service: DeviceService = Depends(get_device_service)):
-    action, result_state = await service.control_device(
+    response, result_state = await service.control_device(
         device_id=device_id,
         **request.model_dump()
     )
+
     return DeviceControl_response(
-        action=action,
+        action=response,
         state=result_state,
         device_id=device_id
     )
 
 
 @router.get('/{device_id}/status', response_model=DeviceStatus_response)
-async def get_device_status_r(device_id: int,
-                              device_type: str = Query(..., description='Получение статуса устройства'),
-                              service: DeviceService = Depends(get_device_service)):
-    try:
-        state = await service.get_device_status(device_id=device_id, device_type=device_type)
-    except:
-        raise HTTPException(status_code=404, detail='Device not found')
-    return DeviceStatus_response(
-        device_id=device_id,
-        state=state
-    )
+async def get_device_status_r(device_id: int):
+    devices = await ws_manager.get_list()
+    return DeviceStatus_response(device_id=device_id, status=device_id in devices)
 
 
 @router.get('/active', response_model=ActiveDevicesResponse, summary='Список активных устройств')
-async def active_devices(service: DeviceService = Depends(get_device_service)):
-    device_ids = await service.get_active_devices()
+async def active_devices():
+    device_ids = await ws_manager.get_list()
     return ActiveDevicesResponse(active_devices=device_ids)
 
 
@@ -73,7 +65,8 @@ async def get_all_devices_in_short(service: DeviceService = Depends(get_device_s
 async def create_device(data: DeviceCreate, service: DeviceService = Depends(get_device_service)):
     try:
         device = await service.create(data)
-        logger.info(f'Новое устройство: {device.id}')
+        event_bus.emit('new_device', device.id)
         return device
     except Exception as e:
         logger.error(f'Ошибка при создании устройства: {e}')
+        raise HTTPException(status_code=500, detail="Ошибка на сервере при создании устройства")
