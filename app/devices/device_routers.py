@@ -30,16 +30,12 @@ async def websocket_connection(websocket: WebSocket, device_id: int,
 @router.post(path='/control/{device_id}', response_model=DeviceControl_response, summary='Управление устройством')
 async def control_socket(device_id: int, request: DeviceControl_request,
                          service: DeviceService = Depends(get_device_service)):
-    response, result_state = await service.control_device(
+    response = await service.control_device(
         device_id=device_id,
         **request.model_dump()
     )
 
-    return DeviceControl_response(
-        action=response,
-        state=result_state,
-        device_id=device_id
-    )
+    return DeviceControl_response(response=response, device_id=device_id)
 
 
 @router.get('/{device_id}/status', response_model=DeviceStatus_response)
@@ -70,4 +66,3 @@ async def create_device(data: DeviceCreate, service: DeviceService = Depends(get
     except Exception as e:
         logger.error(f'Ошибка при создании устройства: {e}')
         raise HTTPException(status_code=500, detail="Ошибка на сервере при создании устройства")
-

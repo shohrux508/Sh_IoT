@@ -32,8 +32,7 @@ class DeviceInfo(BaseModel):
 
 
 class DeviceControl_response(BaseModel):
-    action: str
-    state: bool | int
+    response: str
     device_id: int
 
 

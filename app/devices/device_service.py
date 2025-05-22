@@ -77,13 +77,13 @@ class DeviceService(BaseService[DeviceRepository]):
             return response
         if start_time and stop_time:
             response = await device.set_timer(start_time=start_time, stop_time=stop_time)
-            return response, state
+            return response
         if state is not None:
             response = await device.set_state(state=state)
-            return response, state
+            return response
 
         response = await device.clear_timer()
-        return response, 0
+        return response
 
     @staticmethod
     async def get_device_status(device_id: int) -> bool:
