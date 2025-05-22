@@ -70,3 +70,4 @@ async def create_device(data: DeviceCreate, service: DeviceService = Depends(get
     except Exception as e:
         logger.error(f'Ошибка при создании устройства: {e}')
         raise HTTPException(status_code=500, detail="Ошибка на сервере при создании устройства")
+

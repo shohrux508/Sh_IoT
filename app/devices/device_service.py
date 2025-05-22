@@ -53,7 +53,7 @@ class DeviceService(BaseService[DeviceRepository]):
         return websocket
 
     @staticmethod
-    async def control_device(device_id: int, device_type: str, state: bool = None,
+    async def control_device(device_id: int, get_status: bool = False, state: bool = None,
                              start_time: str = None, stop_time: str = None):
         """
         Управлять устройством через WebSocket.
@@ -64,23 +64,26 @@ class DeviceService(BaseService[DeviceRepository]):
         - очистку таймера
 
         :param device_id: ID устройства.
-        :param device_type: Тип устройства.
+        :param get_status: Запрос состояния.
         :param state: Целевое состояние (вкл/выкл).
         :param start_time: Время включения.
         :param stop_time: Время выключения.
         :return: Результат действия и текущее состояние.
         """
 
-        device = DeviceCommands(device_type=device_type, device_id=device_id)
+        device = DeviceCommands(device_id=device_id)
+        if get_status:
+            response = await device.get_status()
+            return response
         if start_time and stop_time:
             response = await device.set_timer(start_time=start_time, stop_time=stop_time)
             return response, state
-        elif state is not None:
+        if state is not None:
             response = await device.set_state(state=state)
             return response, state
-        else:
-            response = await device.clear_timer()
-            return response, 0
+
+        response = await device.clear_timer()
+        return response, 0
 
     @staticmethod
     async def get_device_status(device_id: int) -> bool:
@@ -92,9 +95,8 @@ class DeviceService(BaseService[DeviceRepository]):
         :return: True — включено, False — выключено.
         """
         websocket = await DeviceService.get_websocket_or_404(device_id)
-        device = DeviceCommands(device_type=device_type, device_id=device_id)
+        device = DeviceCommands(device_id=device_id)
         return await device.get_state()
-
 
     async def verify_auth_token(self, device_id: int, auth_token: str):
         device = await self.repo.get_by_auth_token(auth_token=auth_token)
