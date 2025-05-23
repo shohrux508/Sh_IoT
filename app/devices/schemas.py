@@ -32,7 +32,7 @@ class DeviceInfo(BaseModel):
 
 
 class DeviceControl_response(BaseModel):
-    response: str
+    response: str | dict
     device_id: int
 
 

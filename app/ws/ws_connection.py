@@ -70,7 +70,6 @@ class WSConnectionManager:
             self.pending.setdefault(device_id, {})[request_id] = future
             try:
                 response = await asyncio.wait_for(future, timeout=timeout)
-                response = response.get('request_id')
                 event_bus.emit('got_reply', device_id, data, str(response))
                 return response
             except asyncio.TimeoutError:

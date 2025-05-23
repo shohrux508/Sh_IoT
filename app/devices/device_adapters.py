@@ -18,7 +18,7 @@ class BaseDevice(ABC):
         request_id = str(uuid.uuid4())
         response = await ws_manager.send_personal(device_id=self.device_id, data=data, timeout=30,
                                                   request_id=request_id)
-
+        print(f'Websocket device answer: {response}')
         return response
 
     @abstractmethod
