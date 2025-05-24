@@ -1,0 +1,65 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Sh_IoT Control</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center">
+  <div class="bg-gray-800 p-8 rounded-xl shadow-xl w-96 text-center">
+    <h1 class="text-2xl font-bold mb-4">Управление устройством</h1>
+
+    <div class="flex justify-center space-x-4 mb-4">
+      <button onclick="sendCommand('on')" class="bg-green-500 hover:bg-green-600 active:scale-95 transition transform px-4 py-2 rounded">
+        Включить
+      </button>
+      <button onclick="sendCommand('off')" class="bg-red-500 hover:bg-red-600 active:scale-95 transition transform px-4 py-2 rounded">
+        Выключить
+      </button>
+    </div>
+
+    <p id="status" class="text-sm text-green-400 mb-2">Статус: подключение...</p>
+    <p id="log" class="text-sm text-gray-300 mb-2">Ожидание действий...</p>
+    <div id="logBox" class="text-left max-h-32 overflow-y-auto text-xs text-gray-400 border-t border-gray-600 pt-2"></div>
+  </div>
+
+  <script>
+    const ws = new WebSocket("wss://shiot-production.up.railway.app/devices/ws/2/connect");
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ auth_token: "abc1234" }));
+      updateStatus("подключено", true);
+      log("WebSocket соединение установлено");
+    };
+
+    ws.onmessage = (event) => {
+      log("Сервер: " + event.data);
+    };
+
+    ws.onclose = () => {
+      updateStatus("отключено", false);
+      log("Соединение с сервером закрыто");
+    };
+
+    function sendCommand(cmd) {
+      ws.send(JSON.stringify({ command: cmd }));
+      document.getElementById("log").innerText = "Отправлено: " + cmd;
+    }
+
+    function log(msg) {
+      const box = document.getElementById("logBox");
+      const p = document.createElement("p");
+      p.innerText = msg;
+      box.appendChild(p);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function updateStatus(text, connected) {
+      const el = document.getElementById("status");
+      el.innerText = "Статус: " + text;
+      el.className = connected ? "text-sm text-green-400 mb-2" : "text-sm text-red-400 mb-2";
+    }
+  </script>
+</body>
+</html>
