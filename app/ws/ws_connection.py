@@ -18,7 +18,7 @@ class WSConnectionManager:
 
     async def add(self, device_id: str, ws: WebSocket):
         self.active[device_id] = ws
-        event_bus.emit('device_ws_added', device_id)
+        event_bus.emit('websocket_added', device_id)
 
     async def remove(self, device_id: str) -> bool:
         try:
@@ -43,10 +43,11 @@ class WSConnectionManager:
         ]
         await asyncio.gather(*tasks)
 
-    async def _safe_send(self, device_id, ws, payload):
+    @staticmethod
+    async def _safe_send(device_id, ws, payload):
         try:
             await ws.send_text(payload)
-        except Exception:
+        except:
             event_bus.emit('message_failed', device_id, payload)
 
     async def send_personal(self, device_id: str, data: str | dict,
@@ -86,13 +87,33 @@ class WSConnectionManager:
             except Exception as e:
                 logger.error(f"Ошибка при разборе сообщения от {device_id}: {e}\n{message}")
                 return
-        if 'request_id' not in message:
-            return
-        request_id = message.get('request_id')
+
+        request_id = message.get('request_id', None)
         if request_id and device_id in self.pending and request_id in self.pending[device_id]:
             future = self.pending[device_id][request_id]
             if not future.done():
                 future.set_result(message)
+        return
 
 
 ws_manager = WSConnectionManager()
+
+
+@event_bus.on('websocket_added')
+async def handle_new_ws(device_id):
+    pass
+
+
+@event_bus.on('message_failed')
+async def handle_message_failed(device_id, message):
+    pass
+
+
+@event_bus.on('no_reply')
+async def handle_no_reply():
+    pass
+
+
+@event_bus.on('got_reply')
+async def handle_got_reply():
+    pass

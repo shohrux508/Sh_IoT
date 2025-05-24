@@ -5,6 +5,9 @@ from app.logger_module.logger_utils import get_logger_factory
 get_logger = get_logger_factory(__name__)
 logger = get_logger()
 
+@event_bus.on('new_device')
+async def handle_new_device(device_id):
+    logger.info(f'Новое устройство: {device_id}')
 
 @event_bus.on("device_connected")
 async def handle_connect(device_id):
@@ -46,9 +49,9 @@ async def handle_session_end(device_id):
     logger.info(f'[{device_id}], Сессия завершена')
 
 
-@event_bus.on('websocket_wrong_auth_token')
+@event_bus.on('device_wrong_auth_token')
 async def handle_auth_token_wrong(device_id):
-    pass
+    logger.info(f'[{device_id}], Неверный auth_token')
 
 
 @event_bus.on('message_failed')
@@ -57,6 +60,10 @@ async def handle_message_failed(device_id, message):
     raise RuntimeError(f'Websocket for device {device_id} not found')
 
 
-@event_bus.on('no_answer_message_from_device')
+@event_bus.on('no_reply')
 async def handle_no_message(device_id, message):
     logger.info(f"[{device_id}], Устройство не ответил на сообщение: {message}")
+
+@event_bus.on('got_reply')
+async def handle_reply_message(device_id, data, response):
+    logger.info(f'[{device_id}], Ответ от устройства. Запрос: {data}\nОтвет: {response}')
