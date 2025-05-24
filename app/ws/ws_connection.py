@@ -110,10 +110,10 @@ async def handle_message_failed(device_id, message):
 
 
 @event_bus.on('no_reply')
-async def handle_no_reply():
+async def handle_no_reply(device_id, data):
     pass
 
 
 @event_bus.on('got_reply')
-async def handle_got_reply():
+async def handle_got_reply(device_id, data, response):
     pass
