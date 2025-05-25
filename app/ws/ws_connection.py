@@ -99,6 +99,7 @@ class WSConnectionManager:
 ws_manager = WSConnectionManager()
 
 
+
 @event_bus.on('websocket_added')
 async def handle_new_ws(device_id):
     pass

@@ -50,6 +50,11 @@ async def admin_panel(request: Request):
     return templates.TemplateResponse('admin_panel.html', {"request": request})
 
 
+@app.get('/user')
+async def welcome():
+    return {"message": "Hello, world!"}
+
+
 @app.middleware('http')
 async def log_requests(request: Request, call_next):
     client = request.client.host if request.client else 'unknown'
